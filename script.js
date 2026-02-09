@@ -58,7 +58,7 @@ const SCREEN = {
 let currentScreen = SCREEN.HOME;
 
 // =====================
-// 地図用変数
+// 地図用変数等
 // =====================
 
 let map = null;
@@ -70,6 +70,7 @@ let runRoute = []; // ★ 追加：現在の走行ルート
 let mapMovedDistance = 0; // ★ 地図上で進んだ距離（m）
 let isMapAutoFollow = true; // ★ 自動追尾ON/OFF
 let startLatLng = null; // ★ 実走開始地点（強制帰還用）
+let isRunMapView = false; // false=グラフ / true=地図
 
 // =====================
 // ルート総距離計算
@@ -2280,8 +2281,6 @@ document.getElementById("dev-apply").addEventListener("click", () => {
 // =====================
 // 実走：表示切替（中央＋右ボタン式）
 // =====================
-
-let isRunMapView = false; // false=グラフ / true=地図
 
 const viewGraph = document.getElementById("run-view-graph");
 const viewMap   = document.getElementById("run-view-map");
