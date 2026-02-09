@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>育成ゲーム</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Leaflet（地図ライブラリ） -->
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet/dist/leaflet.css"
+/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ① ステータスバー -->
+  <div id="status-area">
+    <div class="status-box" id="status-main"></div>
+    <div class="status-box" id="status-core"></div>
+    <div class="status-box" id="status-mood"></div>
+    <div class="status-box" id="status-condition"></div>
+  </div>
+
+  <!-- ② メインディスプレイ -->
+<div id="main-area">
+  <div id="main-center">
+
+        <!-- ★ カメラ映像 -->
+    <video id="camera-view" autoplay playsinline class="hidden"></video>
+
+        <!-- ホーム用：馬表示 -->
+    <div id="home-horse">
+      <img src="pendora-.png" alt="馬">
+    </div>
+   <div id="run-display" class="hidden">
+
+  <!-- グラフ画面 -->
+  <div id="run-view-graph">
+
+    <canvas id="speed-graph" width="300" height="150"></canvas>
+
+    <div id="graph-legend">
+      <span class="legend-speed">
+        - - - 速度
+      </span>
+      ／
+      <span class="legend-distance">
+        ― 走行距離
+      </span>
+    </div>
+
+    <div id="run-distance-text"></div>
+
+  </div>
+
+  <div id="route-error-text" class="hidden">
+    ルート生成に失敗しました
+  </div>
+
+  <div id="route-loading" class="hidden">
+    <div class="spinner"></div>
+    <div class="loading-text">ルート生成中…</div>
+  </div>
+
+  <!-- 地図画面 -->
+  <div id="run-view-map" class="hidden">
+
+    <div id="map"></div>
+
+  </div>
+
+  <!--<div id="map-distance-text" style="
+    font-size: 12px;
+    color: #333;
+    margin-top: 4px;
+  ">
+    地図上移動距離：0 m
+  </div>-->
+
+</div>
+
+   <div id="option-controls" class="hidden">
+    <label>
+      馬の名前：
+      <input type="text" id="horse-name-input">
+    </label>
+    <button id="horse-name-apply">設定</button>
+   </div>
+
+   <div id="scroll-training" class="hidden">
+    <div id="stage">
+      <div id="horse">
+        <img id="horse-img" src="run1.png" alt="horse">
+      </div>
+      <div id="ground"></div>
+      <div id="obstacle"></div>
+      <div id="carrot"></div>
+    </div>
+    <p>スコア：<span id="score">0</span></p>
+   </div>
+  </div>
+</div>
+
+
+  <!-- ④ モード別操作 -->
+  <div id="action-area">
+     <!-- ★ 夜間：睡眠確認UI -->
+     <div id="sleep-confirm" class="hidden">
+       <div id="sleep-text"></div>
+       <button id="sleep-wake">起こす</button>
+       <button id="sleep-cancel">起こさない</button>
+     </div>
+
+    <div id="feed-controls" class="hidden">
+
+      <!-- 中央固定 -->
+      <div id="feed-center">
+        <button id="feed">給餌する</button>
+      </div>
+
+      <!-- 右側 -->
+      <div id="feed-side">
+        <button id="camera-btn">カメラ</button>
+      </div>
+
+      <div id="feed-remaining"></div>
+      <div id="feed-status"></div>
+    </div>
+
+    <div id="camera-controls" class="hidden">
+
+      <!-- 中央 -->
+      <div id="camera-center">
+        <button id="camera-shot">撮影</button>
+        <button id="camera-retake" class="hidden">撮り直す</button>
+      </div>
+
+      <!-- 右 -->
+      <div id="camera-side">
+        <button id="camera-cancel">やめる</button>
+      </div>
+
+    </div>
+
+    <div id="training-controls" class="hidden">
+
+      <!-- 左：難易度 -->
+      <div id="training-left">
+        <button id="difficulty-button">
+          難易度：<span id="difficulty-text">2</span>
+        </button>
+      </div>
+
+      <!-- 中央 -->
+      <div id="training-center">
+        <button id="training-click">トレーニング開始</button>
+      </div>
+
+      <!-- 右 -->
+      <div id="training-side">
+        <button id="jump-button" class="hidden">ジャンプ</button>
+      </div>
+
+        <!-- ★ 難易度選択（トレーニング用） -->
+        <div id="difficulty-select" class="hidden">
+          <button data-diff="1">1（かんたん）</button>
+          <button data-diff="2">2（ふつう）</button>
+          <button data-diff="3">3（むずかしい）</button>
+        </div>
+
+    </div>
+
+    <div id="run-controls" class="hidden">
+
+      <!-- 実走済み表示 -->
+      <div id="run-finished-text" class="hidden">
+        今日は実走済み
+      </div>
+
+      <!-- 中央固定 -->
+      <div id="run-center">
+        <button id="run-start">実走開始</button>
+      </div>
+
+      <!-- 右側：表示切替 -->
+      <div id="run-side">
+        <button id="run-view-toggle">地図</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ③ モード切替 -->
+  <div id="mode-area">
+    <button id="home-button">ホーム</button>
+    <button id="training-button">トレーニング</button>
+    <button id="run-button">実走</button>
+    <button id="option-button">オプション</button>
+  </div>
+</div>
+
+
+ <!-- 開発用操作（2列目） -->
+ <!--<div id="dev-controls">
+  <button id="reset">データ初期化（開発用）</button>
+
+  <button id="dev-toggle">ステータス調整</button>
+
+  <div id="dev-panel">
+    <input id="dev-speed" placeholder="基礎走力" type="number">
+    <input id="dev-acc" placeholder="加速力" type="number">
+    <input id="dev-dist" placeholder="累積距離" type="number">
+    <button id="dev-apply">反映</button>
+  </div>
+</div>-->
+
+  <script src="script.js"></script>
+</body>
+</html>

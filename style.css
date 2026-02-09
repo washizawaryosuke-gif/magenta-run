@@ -1,0 +1,524 @@
+@font-face {
+  font-family: "GameFont";
+  src: url("fonts/Nosutaru-dotMPlusH-10-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  margin: 0;
+  background: #000;
+  color: #eee;
+  font-family: "GameFont", sans-serif;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  width: 100%;
+  max-width: 420px;          /* 縦19:横12 */
+  aspect-ratio: 12 / 19;
+  margin: 0 auto;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* ===== ① ステータス ===== */
+#status-area {
+  height: 25%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.status-box {
+  background: #444;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+/* ===== ② メイン ===== */
+#main-area {
+  height: 40%;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+#main-center {
+  width: 90%;
+  height: 90%;
+  background: #222;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== ④ アクション ===== */
+#action-area {
+  height: 15%;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+#feed-remaining {
+margin-top: 6px;
+font-size: 12px;
+color: #ccc;
+text-align: center;
+}
+
+#run-finished-text {
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #ccc;
+  text-align: center;
+}
+
+#sleep-confirm {
+  width: 100%;
+  text-align: center;
+}
+
+#sleep-text {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+#action-area button {
+  background: #555;
+  color: #eee;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: "GameFont", sans-serif;
+}
+
+/* ===== 難易度選択 ===== */
+#training-left {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin-left: -140px; /* 中央より左 */
+}
+
+#difficulty-select {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ===== トレーニング操作（中央固定＋横出現） ===== */
+#training-controls {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* 中央固定エリア */
+#training-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ジャンプ用サイドエリア */
+#training-side {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin-left: 120px; /* ← 距離はここで調整 */
+}
+
+/* ===== 給餌操作（中央固定＋右配置） ===== */
+#feed-controls {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#feed-center {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+}
+
+#feed-side {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  margin-left: 120px; /* ← カメラとの距離 */
+}
+
+/* ===== 撮影操作（中央＋右） ===== */
+#camera-controls {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#camera-center {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+}
+
+#camera-side {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  margin-left: 120px;
+}
+
+/* ===== 実走操作（中央＋右） ===== */
+#run-controls {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#run-center {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+}
+
+#run-side {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  margin-left: 120px; /* 距離調整 */
+}
+
+/* ===== ③ モード切替 ===== */
+#mode-area {
+  height: 20%;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  background: #000;
+}
+
+#mode-area button {
+  flex: 1;
+  background: #555;
+  color: #eee;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: "GameFont", sans-serif;
+}
+
+/* ===== 横スクロールゲーム ===== */
+#stage {
+  position: relative;
+  width: 300px;
+  height: 150px;
+  background: #222;
+  overflow: hidden;
+  margin: 20px auto;
+}
+
+#horse {
+  position: absolute;
+  width: 75px;
+  height: 50px;
+  left: 50px;
+  bottom: 20px;
+}
+
+#horse-img {
+  width: 75px;
+  height: 50px;
+  image-rendering: pixelated;
+  display: block;
+}
+
+#ground {
+  position: absolute;
+  width: 600px;
+  height: 20px;
+  background: #555;
+  bottom: 0;
+  left: 0;
+}
+
+/* ===== 障害物（当たり判定＋画像分離方式） ===== */
+#obstacle {
+  position: absolute;
+
+  /* 当たり判定（今まで通り 5×20） */
+  width: 5px;
+  height: 26px;
+
+  /* 見えなくする */
+  background: transparent;
+
+  bottom: 20px;
+  left: 300px;
+
+  /* 中身配置用 */
+  pointer-events: none;
+}
+
+/* 障害物画像（見た目だけ担当） */
+#obstacle::before {
+  content: "";
+  position: absolute;
+
+  /* 画像サイズ（11×20） */
+  width: 15px;
+  height: 26px;
+
+  background-image: url("obstacle2.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+
+  /*
+    ★ 超重要 ★
+    中心合わせ
+  */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+
+/* ===== 人参（当たり判定＋画像分離方式） ===== */
+#carrot {
+  position: absolute;
+
+  /* 当たり判定用の円（12px） */
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+
+  /* 見えないようにする */
+  background: transparent;
+
+  bottom: 40px;
+  left: 300px;
+
+  /* 中身配置用 */
+  pointer-events: none;
+}
+
+/* 人参画像（見た目だけ担当） */
+#carrot::before {
+  content: "";
+  position: absolute;
+
+  /* 画像サイズ（18×12） */
+  width: 36px;
+  height: 24px;
+
+  background-image: url("indometacin.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+
+  /*
+    ★ 超重要ポイント ★
+
+    下端を当たり判定の下端に合わせる
+    → bottom: 0
+
+    横は中央合わせ
+  */
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+
+/* ===== 実走グラフ ===== */
+#speed-graph {
+  border: 1px solid #555;
+}
+
+#graph-legend {
+  font-size: 10px;
+  color: #aaa;
+}
+
+/* ===== 開発用UI ===== */
+#dev-controls {
+  margin-top: 10px;
+}
+
+#dev-panel {
+  display: none;
+  margin-top: 5px;
+  border: 1px dashed #666;
+  padding: 5px;
+}
+
+/* ===== 共通 ===== */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ===== モード選択：選択中 ===== */
+#mode-area button.mode-active {
+  background: #aaa;
+  color: #000;
+  opacity: 1;            /* ★ disabled の 0.5 を打ち消す */
+}
+
+/* ===== ホーム画面：馬表示 ===== */
+#home-horse {
+  display: none;                 /* ← 基本は非表示 */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#home-horse img {
+  width: 240px;                  /* 元pxの2倍 */
+  height: 200px;                  /* 元pxの2倍 */
+  image-rendering: pixelated;    /* ★ ドット絵を荒らさない */
+}
+
+/* ===== カメラ表示 ===== */
+#camera-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+/* 馬は必ず前景 */
+#home-horse {
+  position: relative;
+  z-index: 2;
+}
+
+/* ===== 実走：地図表示 ===== */
+#route-error-text {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(200,0,0,0.8);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  z-index: 1000;
+}
+.hidden { display: none; }
+
+/* ===== ルート生成中スピナー ===== */
+#route-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 16px 20px;
+  border-radius: 8px;
+  z-index: 1000;
+  text-align: center;
+}
+
+#route-loading .loading-text {
+  font-size: 12px;
+  color: #eee;
+  margin-top: 8px;
+}
+
+/* くるくる */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 4px solid #666;
+  border-top-color: #0f0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#run-view-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+#run-view-tabs button {
+  flex: 1;
+  font-size: 11px;
+}
+
+#run-view-tabs button.active {
+  background: #aaa;
+  color: #000;
+}
+
+#run-view-map {
+  width: 300px;
+  height: 150px;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* ===== グラフ凡例 ===== */
+#graph-legend {
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.legend-speed {
+  color: rgba(0, 242, 255, 0.904); /* 速度グラフと同色 */
+  font-weight: bold;
+}
+
+.legend-distance {
+  color: rgb(255, 238, 0); /* 距離グラフと同色 */
+  font-weight: bold;
+}
