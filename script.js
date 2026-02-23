@@ -368,6 +368,9 @@ const runDisplay = document.getElementById("run-display");
 const routeErrorText = document.getElementById("route-error-text");
 const routeLoading = document.getElementById("route-loading");
 const homeHorse = document.getElementById("home-horse");
+const homeHorseImg = document.getElementById("home-horse-img");
+const homeShadowImg = document.getElementById("home-shadow-img");
+const homeBackground = document.getElementById("home-background");
 const sleepConfirm = document.getElementById("sleep-confirm");
 const sleepText = document.getElementById("sleep-text");
 const sleepWakeBtn = document.getElementById("sleep-wake");
@@ -424,28 +427,52 @@ difficultySelect.querySelectorAll("button").forEach(btn => {
 let cameraStream = null;
 let isCameraFrozen = false; // ★ 撮影後フリーズ中か
 
+let currentCameraFacing = "environment"; 
+// "environment" = 背面
+// "user" = インカメ
+
 async function startCamera() {
   if (cameraStream) return;
 
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
+      video: {
+        facingMode: { exact: currentCameraFacing }
+      },
       audio: false
     });
 
     cameraView.srcObject = cameraStream;
     cameraView.classList.remove("hidden");
 
-    // ★ モードボタンロック
     setModeButtonsLocked(true);
 
-    // ★ UI切替
     feedControls.classList.add("hidden");
     cameraControls.classList.remove("hidden");
 
   } catch (err) {
-    alert("カメラを起動できませんでした");
-    console.error(err);
+
+    // exactが失敗した場合の保険
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: currentCameraFacing
+        },
+        audio: false
+      });
+
+      cameraView.srcObject = cameraStream;
+      cameraView.classList.remove("hidden");
+
+      setModeButtonsLocked(true);
+      feedControls.classList.add("hidden");
+      cameraControls.classList.remove("hidden");
+
+    } catch (e) {
+      console.error(e);
+      alert("カメラを起動できませんでした");
+      resetCameraUIToHome();   // ← ★追加
+    }
   }
 }
 
@@ -496,6 +523,61 @@ cameraCancelBtn.onclick = () => {
 
   startHomeHorseAnimation();
 };
+
+const cameraSwitchBtn = document.getElementById("camera-switch");
+
+cameraSwitchBtn.onclick = async () => {
+
+  // 向きを切り替え
+  currentCameraFacing =
+    currentCameraFacing === "environment"
+      ? "user"
+      : "environment";
+
+  // いったん停止
+  stopCamera();
+
+  try {
+    await startCamera();
+  } catch (e) {
+    resetCameraUIToHome();
+  }
+};
+
+// =====================
+// カメラエラー時：完全UI復帰
+// =====================
+function resetCameraUIToHome() {
+
+  // ストリーム停止
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+  }
+
+  cameraStream = null;
+  cameraView.srcObject = null;
+  cameraView.classList.add("hidden");
+
+  // カメラ操作UI非表示
+  cameraControls.classList.add("hidden");
+
+  // 給餌UI復帰
+  feedControls.classList.remove("hidden");
+
+  // ボタン状態リセット
+  cameraShotBtn.classList.remove("hidden");
+  cameraCancelBtn.classList.remove("hidden");
+  cameraRetakeBtn.classList.add("hidden");
+
+  // フリーズ解除
+  isCameraFrozen = false;
+
+  // モードボタン解除
+  setModeButtonsLocked(false);
+
+  // 馬アニメ再開
+  startHomeHorseAnimation();
+}
 
 // =====================
 // カメラ停止
@@ -600,9 +682,56 @@ const HORSE_STATE = {
 let homeHorseState = HORSE_STATE.IDLE;
 let homeHorseTimer = null;
 let beforeHizamageState = HORSE_STATE.IDLE;
+
+// ===== WALKアニメーション定義 =====
+const WALK_FRAMES = [
+  "pendora-walk1",
+  "pendora-walk2",
+  "pendora-walk3",
+  "pendora-walk4"
+];
+
+let isWalking = false;
+let walkFrameIndex = 0;
+let walkLoopCount = 0;
+let walkLoopMax = 0;
+
 // ===== 睡眠状態管理 =====
 let isSleeping = false;        // 今寝ているか
 let forcedSleep = false;      // 夜間ロック（遷移完全停止）
+
+// ===== 向き管理 =====
+let homeHorseDirection = 1; // 1=右向き / -1=左向き
+
+// =====================
+// ホームクリック処理（最終安定版）
+// =====================
+document.addEventListener("click", (e) => {
+
+  // HOME画面以外は無効
+  if (currentScreen !== SCREEN.HOME) return;
+
+  // 実走中は無効
+  if (gameData.time.isRunning) return;
+
+  // ★ 背景または馬エリア内なら有効
+  const clickedInHomeArea =
+    homeBackground.contains(e.target) ||
+    homeHorse.contains(e.target);
+
+  if (!clickedInHomeArea) return;
+
+  handleHomeHorseClick();
+});
+
+// ===== 背景スクロール管理 =====
+let BG_VIEW_WIDTH = 0;
+let BG_IMAGE_WIDTH = 800;
+const BG_STEP = 30;              // 1コマ移動量
+
+let bgOffsetX = null;               // 現在の背景位置
+let bgMinX = BG_VIEW_WIDTH - BG_IMAGE_WIDTH; // 左端限界
+let bgMaxX = 0;                  // 右端限界
 
 // 5〜10秒ランダム
 function randomLongInterval() {
@@ -615,9 +744,10 @@ function getNextHorseState(current) {
   switch (current) {
     // ① pendora-def
     case HORSE_STATE.IDLE:
-      if (r < 0.5) return HORSE_STATE.BLINK;        // 50%
-      if (r < 0.7) return HORSE_STATE.HIZAMAGE;     // 20%
-      return HORSE_STATE.LOOK;                      // 30%
+      if (r < 0.35) return HORSE_STATE.BLINK;
+      if (r < 0.55) return HORSE_STATE.HIZAMAGE;
+      if (r < 0.75) return HORSE_STATE.LOOK;
+      return "WALK"; // ★ 追加
 
     // ② pendora-blink
     case HORSE_STATE.BLINK:
@@ -659,14 +789,54 @@ const modeButtons = [
   optionButton
 ];
 
+// ★ モードロック統一管理フラグ
+let modeLockedByCamera = false;
+let modeLockedByTraining = false;
+let modeLockedByRunning = false;
+
 // =====================
 // モード遷移ボタンロック制御
 // =====================
+function updateModeLockState() {
+
+  // ===== カメラ中は全ロック =====
+  if (modeLockedByCamera) {
+    homeButton.disabled = true;
+    trainingButton.disabled = true;
+    runButton.disabled = true;
+    optionButton.disabled = true;
+    return;
+  }
+
+  // ===== トレーニング中は全ロック =====
+  if (modeLockedByTraining) {
+    homeButton.disabled = true;
+    trainingButton.disabled = true;
+    runButton.disabled = true;
+    optionButton.disabled = true;
+    return;
+  }
+
+  // ===== 実走中は「トレーニングだけ」ロック =====
+  if (modeLockedByRunning) {
+    homeButton.disabled = false;
+    runButton.disabled = false;
+    optionButton.disabled = false;
+    trainingButton.disabled = true;
+    return;
+  }
+
+  // ===== 通常状態 =====
+  homeButton.disabled = false;
+  trainingButton.disabled = false;
+  runButton.disabled = false;
+  optionButton.disabled = false;
+}
+
+// 互換用（既存コードから呼ばれているため残す）
 function setModeButtonsLocked(locked) {
-  homeButton.disabled = locked;
-  trainingButton.disabled = locked;
-  runButton.disabled = locked;
-  optionButton.disabled = locked;
+  modeLockedByCamera = locked;
+  updateModeLockState();
 }
 
 // =====================
@@ -698,7 +868,8 @@ function updateRunActionLock() {
 
   feedButton.disabled = actionLocked;
   cameraBtn.disabled = actionLocked;
-  trainingButton.disabled = actionLocked;
+  modeLockedByRunning = gameData.time.isRunning;
+  updateModeLockState();
 }
 
 // =====================
@@ -722,12 +893,27 @@ function updateModeButtonActive(screen) {
 function startHomeHorseAnimation() {
   if (homeHorseTimer) return;
 
-  const img = homeHorse.querySelector("img");
+  const img = homeHorseImg;
+
+  // ===== 初期背景中央表示 =====
+  const bgImg = document.getElementById("home-bg-img");
+
+  // ★ 実際の表示幅を取得
+  BG_VIEW_WIDTH = homeBackground.clientWidth;
+  bgMinX = BG_VIEW_WIDTH - BG_IMAGE_WIDTH;
+  bgMaxX = 0;
+
+  // ★ 初回だけ中央にする
+  if (bgOffsetX === null) {
+    bgOffsetX = (BG_VIEW_WIDTH - BG_IMAGE_WIDTH) / 2;
+    bgImg.style.left = bgOffsetX + "px";
+  }
 
   // ===== 再読み込み時：夜なら即スリープ =====
     if (isNightTime()) {
     homeHorseState = "pendora-sleep";
     img.src = homeHorseState + ".png";
+    img.style.transform = "scaleX(" + homeHorseDirection + ")";
     isSleeping = true;
     forcedSleep = true;
 
@@ -738,6 +924,15 @@ function startHomeHorseAnimation() {
 
   function step() {
     img.src = homeHorseState + ".png";
+    img.style.transform = "scaleX(" + homeHorseDirection + ")";
+    homeShadowImg.style.transform = "scaleX(" + homeHorseDirection + ")";
+
+    // ★ shadow画像切り替え
+    if (WALK_FRAMES.includes(homeHorseState)) {
+      homeShadowImg.src = "shadow-walk.png";
+    } else {
+      homeShadowImg.src = "shadow-def.png";
+    }
 
     let delay = 0;
 
@@ -756,11 +951,13 @@ function startHomeHorseAnimation() {
     if (
       !forcedSleep &&
       isNightTime() &&
-      homeHorseState === HORSE_STATE.SIT_BLINK
+      homeHorseState === HORSE_STATE.SIT_BLINK &&
+      homeHorseDirection === -1   // ★ 左向き限定
     ) {
       homeHorseTimer = setTimeout(() => {
         homeHorseState = "pendora-sleep";
         img.src = homeHorseState + ".png";
+        img.style.transform = "scaleX(" + homeHorseDirection + ")";
         isSleeping = true;
         forcedSleep = true;
       }, randomLongInterval());
@@ -784,6 +981,77 @@ function startHomeHorseAnimation() {
       }, randomLongInterval());
       return;
     }
+
+    // ===== WALK処理 =====
+    if (homeHorseState === "WALK") {
+
+      // 初回だけ初期化
+      if (!isWalking) {
+        isWalking = true;
+
+        // 向きランダム決定
+        homeHorseDirection = Math.random() < 0.5 ? 1 : -1;
+
+        walkFrameIndex = 0;
+        walkLoopCount = 0;
+        walkLoopMax = 2 + Math.floor(Math.random() * 3); // 2〜4回
+      }
+
+      const frameName = WALK_FRAMES[walkFrameIndex];
+      img.src = frameName + ".png";
+      img.style.transform = "scaleX(" + homeHorseDirection + ")";
+      homeShadowImg.style.transform = "scaleX(" + homeHorseDirection + ")";
+      homeShadowImg.src = "shadow-walk.png";
+
+      walkFrameIndex++;
+
+      if (walkFrameIndex >= WALK_FRAMES.length) {
+        walkFrameIndex = 0;
+        walkLoopCount++;
+
+        if (walkLoopCount >= walkLoopMax) {
+          isWalking = false;
+          homeHorseState = HORSE_STATE.IDLE;
+          homeHorseTimer = null;
+          step();
+          return;
+        }
+      }
+
+  // ===== 背景スライド処理 =====
+  const bgImg = document.getElementById("home-bg-img");
+
+  // 次の位置計算
+  let nextBgX = bgOffsetX + (BG_STEP * homeHorseDirection);
+
+  // 範囲チェック
+  if (nextBgX < bgMinX) {
+  nextBgX = bgMinX;
+  }
+  if (nextBgX > bgMaxX) {
+    nextBgX = bgMaxX;
+  }
+
+  // 端到達判定
+  const hitEdge = (nextBgX === bgMinX || nextBgX === bgMaxX);
+
+  bgOffsetX = nextBgX;
+  bgImg.style.left = bgOffsetX + "px";
+
+  // 端に到達したら強制終了
+  if (hitEdge) {
+    isWalking = false;
+    homeHorseState = HORSE_STATE.IDLE;
+    homeHorseDirection *= -1; // 次回は逆方向のみ
+    homeHorseTimer = null;
+    step();
+    return;
+  }
+
+  homeHorseTimer = setTimeout(step, 300);
+  return;
+
+}
 
     homeHorseTimer = setTimeout(() => {
 
@@ -815,6 +1083,84 @@ function stopHomeHorseAnimation() {
 }
 
 // =====================
+// 馬クリック時処理
+// =====================
+function handleHomeHorseClick() {
+
+  // sleep中は無反応
+  if (homeHorseState === "pendora-sleep") return;
+
+  // 既存タイマー停止（割り込み）
+  stopHomeHorseAnimation();
+
+  const img = homeHorseImg;
+
+  // ===== sitdown系の場合 =====
+  if (
+    homeHorseState === HORSE_STATE.SIT ||
+    homeHorseState === HORSE_STATE.SIT_BLINK
+  ) {
+
+    isWalking = false;  // ★ 念のため停止
+
+    homeHorseState = HORSE_STATE.HIZAMAGE;
+    img.src = homeHorseState + ".png";
+    img.style.transform = "scaleX(" + homeHorseDirection + ")";
+
+    homeShadowImg.style.transform = "scaleX(" + homeHorseDirection + ")";
+    homeShadowImg.src = "shadow-def.png";  // ★ 影リセット
+
+    setTimeout(() => {
+      homeHorseState = HORSE_STATE.LOOK;
+      img.src = homeHorseState + ".png";
+      img.style.transform = "scaleX(" + homeHorseDirection + ")";
+
+      homeShadowImg.style.transform = "scaleX(" + homeHorseDirection + ")";
+      homeShadowImg.src = "shadow-def.png";  // ★ 影リセット
+
+      resumeFromLookState();
+
+    }, 500);
+
+    return;
+  }
+
+  // ===== それ以外（walk含む） =====
+  isWalking = false;  // ★ WALK強制終了
+
+  homeHorseState = HORSE_STATE.LOOK;
+  img.src = homeHorseState + ".png";
+  img.style.transform = "scaleX(" + homeHorseDirection + ")";
+
+  homeShadowImg.style.transform = "scaleX(" + homeHorseDirection + ")";
+  homeShadowImg.src = "shadow-def.png";  // ★ 影を通常に戻す
+
+  resumeFromLookState();
+}
+
+// =====================
+// LOOK状態後の通常復帰
+// =====================
+function resumeFromLookState() {
+
+  const img = homeHorseImg;
+
+  const delay = 5000 + Math.random() * 5000; // 5〜10秒
+
+  homeHorseTimer = setTimeout(() => {
+
+    homeHorseState = HORSE_STATE.IDLE;
+    img.src = homeHorseState + ".png";
+    img.style.transform = "scaleX(" + homeHorseDirection + ")";
+    homeShadowImg.style.transform = "scaleX(" + homeHorseDirection + ")";
+
+    homeHorseTimer = null;
+    startHomeHorseAnimation(); // 通常ロジック復帰
+
+  }, delay);
+}
+
+// =====================
 // 画面遷移制御
 // =====================
 function switchScreen(screen) {
@@ -830,7 +1176,8 @@ function switchScreen(screen) {
       sleepConfirm,
       document.getElementById("scroll-training"),
       runDisplay,
-      homeHorse
+      homeHorse,
+      homeBackground
     ].forEach(el => el.classList.add("hidden"));
 
     stopHomeHorseAnimation();
@@ -860,6 +1207,8 @@ if (screen === SCREEN.HOME) {
   trainingControls.classList.add("hidden");
   runControls.classList.add("hidden");
 
+  homeBackground.classList.remove("hidden"); 
+
   // ★ 実走中は馬を表示しない
   if (!gameData.time.isRunning) {
     homeHorse.classList.remove("hidden");
@@ -887,6 +1236,12 @@ if (screen === SCREEN.HOME) {
     isRunMapView = false;
     updateRunView();
   }
+
+    setTimeout(() => {
+      if (map) {
+        map.invalidateSize();
+      }
+    }, 100);
 
   // ===== RUN_RESULT =====
   if (screen === SCREEN.RUN_RESULT) {
@@ -1471,8 +1826,18 @@ function initRunMap() {
     attribution: "© OpenStreetMap contributors"
   }).addTo(map);
 
-  // マーカー
-  mapMarker = L.marker(currentLatLng).addTo(map);
+  // ===== カスタム馬マーカー定義 =====
+  const horseIcon = L.icon({
+    iconUrl: "mapmarker.png",
+    iconSize: [60, 59],      // 画像サイズ
+    iconAnchor: [42, 59],    // 足元位置
+  });
+
+// マーカー生成
+mapMarker = L.marker(currentLatLng, {
+  icon: horseIcon
+}).addTo(map);
+
 
   // ★ 手動操作したら自動追尾OFF
   map.on("dragstart zoomstart", () => {
@@ -1766,6 +2131,15 @@ function drawSpeedGraph() {
      canvas.height -
      BOTTOM_MARGIN -
      (v / graphVMax) * (canvas.height - TOP_MARGIN - BOTTOM_MARGIN);
+
+     ctx.strokeStyle = "rgba(255,255,255,0.08)"; // 薄い線
+     ctx.lineWidth = 1;
+
+     ctx.beginPath();
+     ctx.moveTo(LEFT_MARGIN, y);
+     ctx.lineTo(canvas.width - RIGHT_MARGIN, y);
+     ctx.stroke();
+
     ctx.fillText(
       Math.round(v / unitFactor),
       LEFT_MARGIN - 28,
@@ -1959,7 +2333,8 @@ function startScrollTraining() {
   jumpButton.classList.remove("hidden");   // ← ジャンプ出現
 
   isTraining = true;
-  setModeButtonsLocked(true);
+  modeLockedByTraining = true;
+  updateModeLockState();
 
   startRunAnimation();
 
@@ -2069,7 +2444,8 @@ if (carrotActive) {
       stopRunAnimation();
 
       isTraining = false;
-      setModeButtonsLocked(false);
+      modeLockedByTraining = false;
+      updateModeLockState();
 
       difficultyButton.disabled = false;
 

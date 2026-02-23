@@ -65,6 +65,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 /* ===== ④ アクション ===== */
@@ -191,6 +192,14 @@ text-align: center;
   top: 40%;
   transform: translate(-50%, -50%);
   margin-left: 120px;
+}
+
+#camera-left {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  margin-left: -120px;  /* ← 左側対称配置 */
 }
 
 /* ===== 実走操作（中央＋右） ===== */
@@ -407,10 +416,51 @@ button:disabled {
   justify-content: center;
 }
 
+#home-horse {
+  position: relative;
+  width: 272px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
 #home-horse img {
-  width: 240px;                  /* 元pxの2倍 */
-  height: 200px;                  /* 元pxの2倍 */
-  image-rendering: pixelated;    /* ★ ドット絵を荒らさない */
+  position: absolute;   /* ← これが重要 */
+  width: 272px;
+  height: 200px;
+  left: 0;              /* ← 中央計算しない */
+  top: 0;
+  image-rendering: pixelated;
+}
+
+#home-shadow-img {
+  opacity: 0.5;
+  z-index: 1;
+}
+
+#home-horse-img {
+  z-index: 2;
+}
+
+/* ===== ホーム背景レイヤー ===== */
+#home-background {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;      /* ← グレー枠の下端に固定 */
+  height: 240px;  /* 背景画像と同じ高さ */
+  overflow: hidden;
+  z-index: 0;
+}
+
+#home-background img {
+  position: absolute;
+  left: 0;
+  width: 800px;   /* 400px × 2倍 */
+  height: 240px;   /* 120px × 2倍 */
+  image-rendering: pixelated;
 }
 
 /* ===== カメラ表示 ===== */
@@ -496,8 +546,8 @@ button:disabled {
 }
 
 #run-view-map {
-  width: 300px;
-  height: 150px;
+  width: 370px;
+  height: 200px;
 }
 
 #map {

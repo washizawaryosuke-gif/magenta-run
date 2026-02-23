@@ -34,10 +34,16 @@
         <!-- ★ カメラ映像 -->
     <video id="camera-view" autoplay playsinline class="hidden"></video>
 
+        <!-- ★ ホーム背景 -->
+        <div id="home-background">
+          <img src="home1.png" id="home-bg-img">
+        </div>
+
         <!-- ホーム用：馬表示 -->
-    <div id="home-horse">
-      <img src="pendora-.png" alt="馬">
-    </div>
+        <div id="home-horse">
+          <img id="home-shadow-img" src="shadow-def.png" alt="影">
+          <img id="home-horse-img" src="pendora-def.png" alt="馬">
+        </div>
    <div id="run-display" class="hidden">
 
   <!-- グラフ画面 -->
@@ -146,7 +152,12 @@
         <button id="camera-cancel">やめる</button>
       </div>
 
+      <div id="camera-left">
+        <button id="camera-switch">カメラ切替</button>
+      </div>
+
     </div>
+
 
     <div id="training-controls" class="hidden">
 
